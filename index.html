@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pressure and Chemical Potential, Interactively</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#EDF1F4; --surface:#F8FAFC; --ink:#15202B; --muted:#56636F; --rule:#C5CFD7; --band:#E2E8ED;
+  --a:#C4402B; --b:#2B67D1; --acc:#0F7C7B; --vio:#7B3FB0; --gold:#C8901A; --res:#8B98A4;
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151C; --surface:#141D26; --ink:#E3E9EE; --muted:#97A4B0; --rule:#2B3743; --band:#1B2631;
+    --a:#FF7A66; --b:#6E9FF2; --acc:#4FC9C4; --vio:#B392F0; --gold:#F0C05C; --res:#5B6976;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151C; --surface:#141D26; --ink:#E3E9EE; --muted:#97A4B0; --rule:#2B3743; --band:#1B2631;
+  --a:#FF7A66; --b:#6E9FF2; --acc:#4FC9C4; --vio:#B392F0; --gold:#F0C05C; --res:#5B6976;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:1.1rem;line-height:1.62;-webkit-font-smoothing:antialiased}
+img,canvas{max-width:100%}
+a{color:var(--acc)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 clamp(1rem,4vw,2.5rem)}
+.prose{max-width:40rem}
+
+header.hero{padding:clamp(2.5rem,7vw,5rem) 0 1.5rem}
+.credit{font-family:var(--sans);font-size:.9rem;color:var(--muted);margin:0 0 1.25rem}
+h1{font-weight:500;font-size:clamp(2.5rem,7.5vw,5.25rem);line-height:.98;letter-spacing:-.025em;margin:0 0 1.25rem;max-width:12ch}
+.lede{font-size:clamp(1.15rem,2.2vw,1.35rem);max-width:37rem;margin:0}
+
+section{padding:clamp(2.5rem,6vw,4rem) 0;border-top:1px solid var(--rule)}
+section:first-of-type{border-top:0;padding-top:1rem}
+h2{font-weight:500;font-size:clamp(1.7rem,3.5vw,2.35rem);line-height:1.1;letter-spacing:-.015em;margin:0 0 1rem}
+h3{font-family:var(--sans);font-weight:600;font-size:1rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+.note{font-size:.95rem;color:var(--muted)}
+
+.eq{display:block;text-align:center;margin:1.25rem 0;overflow-x:auto;overflow-y:hidden;padding:.25rem 0}
+.eq.multi{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:2.2em;row-gap:.65rem}
+.boxed.multi{display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:2em;row-gap:.6rem;max-width:100%}
+.eqp{max-width:100%}
+.multi.chain{column-gap:.35em}
+mjx-container{color:inherit}
+mjx-container[display="true"]{margin:0 !important}
+.stats mjx-container,.legend mjx-container,.cap mjx-container,.ctl small mjx-container,table mjx-container{font-size:105%}
+.ctl output mjx-container{font-size:95%}
+.boxed{display:inline-block;border:1.5px solid var(--acc);padding:.5rem 1rem;border-radius:3px}
+
+.fig{display:grid;grid-template-columns:minmax(0,1fr) 17.5rem;gap:1.5rem;align-items:start;margin-top:1.5rem}
+@media (max-width:820px){.fig{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:1rem}
+.canvas-holder{background:var(--surface);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+canvas{display:block;width:100%}
+
+.ctl{font-family:var(--sans);font-size:.9rem;margin-bottom:1.1rem}
+.ctl:last-child{margin-bottom:0}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;font-weight:500;margin-bottom:.3rem}
+.ctl .lt{flex:1 1 auto}
+.ctl .lbl{display:block;font-weight:500;margin-bottom:.4rem}
+.ctl output{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:400}
+.ctl small{display:block;color:var(--muted);line-height:1.4;margin-top:.25rem}
+input[type=range]{width:100%;accent-color:var(--acc);margin:0}
+select{font-family:var(--sans);font-size:.9rem;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:.4rem .5rem;width:100%}
+.btns{display:flex;flex-wrap:wrap;gap:.5rem}
+button{font-family:var(--sans);font-size:.88rem;font-weight:500;color:var(--ink);background:transparent;border:1px solid var(--rule);border-radius:4px;padding:.45rem .8rem;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+.stats{font-family:var(--sans);font-size:.9rem;display:grid;grid-template-columns:auto auto;gap:.35rem 1rem;margin:0}
+.stats dt{color:var(--muted)}
+.stats dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:500;white-space:nowrap}
+.stats .sep{grid-column:1/-1;border-top:1px solid var(--rule);margin:.3rem 0}
+.legend{font-family:var(--sans);font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:1rem;margin:.6rem 0 0;align-items:center}
+.swatch{display:inline-block;width:.75rem;height:.75rem;border-radius:2px;vertical-align:-1px;margin-right:.35rem}
+.swatch.line{height:3px;width:1.1rem;vertical-align:3px;border-radius:0}
+.swatch.dash{height:0;width:1.1rem;vertical-align:3px;border-radius:0;border-top:3px dashed}
+.cap{font-family:var(--sans);font-size:.85rem;color:var(--muted);margin:.5rem .25rem 0}
+.verdict{font-family:var(--sans);font-size:1rem;font-weight:500;margin:.85rem 0 0;max-width:40rem}
+.big{font-size:clamp(2.2rem,5.5vw,3.2rem);line-height:1;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:.1rem 0 .3rem}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1.25rem}
+@media (max-width:700px){.two{grid-template-columns:1fr}}
+.tblwrap{overflow-x:auto}
+table.sum{border-collapse:collapse;font-family:var(--sans);font-size:.92rem;margin:1rem 0}
+table.sum th,table.sum td{padding:.55rem .9rem;border-bottom:1px solid var(--rule);text-align:left;vertical-align:middle}
+table.sum th{font-weight:600;color:var(--muted)}
+.osc{display:flex;gap:.4rem;align-items:center;font-family:var(--sans);font-size:.9rem;flex-wrap:wrap}
+.cell{width:2.4rem;height:2.4rem;border:1.5px solid var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:.15rem}
+.dot{width:.55rem;height:.55rem;border-radius:50%;background:var(--ink)}
+.solids{display:flex;flex-wrap:wrap;gap:2rem;align-items:center;margin:1.25rem 0;font-family:var(--sans);font-size:.9rem}
+.solids .arrow{font-size:1.4rem;color:var(--muted)}
+
+@media (max-width:560px){table.sum{font-size:.8rem} table.sum th,table.sum td{padding:.4rem .35rem}}
+footer{border-top:1px solid var(--rule);padding:2rem 0 3rem;font-family:var(--sans);font-size:.9rem;color:var(--muted)}
+footer p{margin:0 0 .4rem}
+</style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' },
+  options: { enableMenu: false }
+};
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="credit">An interactive demo created by Claude Opus 5.5, based on the lecture notes by Sang Hoon Lee (Statistical Physics 1, Chapter 3, Interactions and Implications, Sections 3.4 to 3.6)</p>
+  <h1>Pressure and Chemical Potential</h1>
+  <p class="lede">Temperature governs the exchange of energy. Let systems also trade volume, or particles, and two more quantities appear from the same entropy: pressure and the chemical potential.</p>
+</header>
+
+<!-- ============ PRESSURE ============ -->
+<section id="pressure" aria-labelledby="h-p">
+  <h2 id="h-p">Mechanical equilibrium and pressure</h2>
+  <div class="prose">
+    <p>Let two gases share not only energy but volume, through a movable partition, with \(U_A + U_B\) and \(V_A + V_B\) fixed. At equilibrium the total entropy \(S_{\text{total}} = S_A + S_B\) is at its maximum in both directions, \(\nabla S_{\text{total}} = 0\) in \((U_A, V_A)\). The energy derivative gives \(T_A = T_B\) as before; with \(dV_A = -dV_B\), the volume derivative gives</p>
+    <div class="eq">\[ \frac{\partial S_A}{\partial V_A} = \frac{\partial S_B}{\partial V_B} \]</div>
+    <p>with the energies and particle numbers held fixed. Experience says their pressures must also be equal, so pressure must be some function of \(\partial S/\partial V\). Its units are \((\mathrm{J/K})/\mathrm{m^3} = \mathrm{Pa/K}\), so multiplying by \(T\) gives units of pressure. A system that gains a lot of entropy by expanding just a little “wants” to expand, which is a large pressure:</p>
+    <div class="eq"><span class="boxed">\( \displaystyle P = T\left(\frac{\partial S}{\partial V}\right)_{U,N} \)</span></div>
+    <p>For a monatomic ideal gas, \(\Omega = f(N)V^NU^{3N/2}\), so \(S = Nk_{\mathrm{B}}\ln V + \tfrac32 Nk_{\mathrm{B}}\ln U + k_{\mathrm{B}}\ln f(N)\) and \(P = TNk_{\mathrm{B}}/V\): we have just derived the ideal gas law, \(PV = Nk_{\mathrm{B}}T\). Release the partition below and watch the system climb the entropy surface to its peak.</p>
+  </div>
+  <div class="fig">
+    <div>
+      <div class="canvas-holder"><canvas id="surfCanvas" tabindex="0" style="touch-action:none;cursor:grab" aria-label="3D surface of the total entropy over the energy and volume of gas A, with the path to equilibrium. Drag or use the arrow keys to rotate."></canvas></div>
+      <p class="cap">\(S_{\text{total}}\) over every way of sharing the energy and the volume. Drag to rotate, or focus the picture and use the arrow keys.</p>
+      <div class="canvas-holder" style="margin-top:.75rem"><canvas id="partCanvas" aria-label="Two gases separated by a movable partition"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ctl">
+        <label for="pNA"><span class="lt">Molecules in A</span> <output id="pNAOut"></output></label>
+        <input type="range" id="pNA" min="20" max="180" step="5" value="120">
+        <small>Out of 200 in all.</small>
+      </div>
+      <div class="ctl">
+        <label for="pU0"><span class="lt">Starting energy share of A</span> <output id="pU0Out"></output></label>
+        <input type="range" id="pU0" min="0.05" max="0.95" step="0.01" value="0.2">
+      </div>
+      <div class="ctl">
+        <label for="pV0"><span class="lt">Starting volume share of A</span> <output id="pV0Out"></output></label>
+        <input type="range" id="pV0" min="0.05" max="0.95" step="0.01" value="0.8">
+      </div>
+      <div class="ctl btns"><button type="button" class="primary" id="pGo">Release the partition</button></div>
+      <dl class="stats">
+        <dt>\(T_A,\ T_B\)</dt><dd id="pT">–</dd>
+        <dt>\(P_A,\ P_B\)</dt><dd id="pP">–</dd>
+        <dt>\(S_{\text{total}}/k_{\mathrm{B}}\), relative to the peak</dt><dd id="pS">–</dd>
+      </dl>
+      <p class="cap" style="margin:.75rem 0 0">Temperatures and pressures relative to their common equilibrium values. The partition moves toward the lower pressure and heat flows toward the lower temperature, each step raising \(S_{\text{total}}\).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ IDENTITY ============ -->
+<section id="identity" aria-labelledby="h-id">
+  <h2 id="h-id">The thermodynamic identity</h2>
+  <div class="prose">
+    <p>Change \(U\) and \(V\) together in two small steps and the entropy changes by \(dS = (\partial S/\partial U)_V\,dU + (\partial S/\partial V)_U\,dV = dU/T + P\,dV/T\), or</p>
+    <div class="eq"><span class="boxed">\( \displaystyle dU = T\,dS - P\,dV \)</span></div>
+    <p>the <strong>thermodynamic identity</strong>, true for any infinitesimal change. Everything above follows from it: at fixed \(V\), \(1/T = (\partial S/\partial U)_V\); at fixed \(U\), \(P = T(\partial S/\partial V)_U\). It also gives \(C_V = T(\partial S/\partial T)_V\) and, from \(dH = T\,dS + V\,dP\), \(C_P = T(\partial S/\partial T)_P\) (Problem 3.33). It is tempting to match it with \(dU = Q + W\), with \(Q = T\,dS\) and \(W = -P\,dV\), but that holds only if the volume changes quasistatically (so the pressure is uniform throughout), no other work is done, and nothing else changes. Then</p>
+    <div class="eq multi"><span class="eqp">\( \displaystyle Q = T\,dS \quad(\text{quasistatic}), \)</span><span class="eqp">\( \displaystyle (\Delta S)_P = \int_{T_i}^{T_f}\frac{C_P}{T}\,dT \)</span></div>
+    <p>so \(\Delta S = Q/T\) even when work is being done, and a quasistatic adiabatic process (\(Q = 0\)) has no entropy change at all: it is <strong>isentropic</strong>.</p>
+  </div>
+
+  <h3>When a process is not quasistatic</h3>
+  <div class="prose">
+    <p>Push a piston in very fast and molecules build up in front of it, pushing back hard: the work done exceeds \(-P\,dV\), so \(Q < T\,dS\), and \(dS > Q/T\). Extra entropy is created. Pull it out faster than the molecules can follow and you get free expansion: no work, no heat, \(\Delta U = 0\), yet \(T\,dS = P\,dV > 0\). In both cases a mechanical process creates entropy over and above any that flows in with heat, and once created it can never be made to disappear. Below, a one-dimensional gas (molecules bouncing back and forth, \(\Omega \propto L^NU^{N/2}\)) is squeezed to half its length, or pulled to twice it, at any speed.</p>
+  </div>
+  <div class="fig">
+    <div>
+      <div class="canvas-holder"><canvas id="pistCanvas" aria-label="A gas in a cylinder with a moving piston"></canvas></div>
+      <p class="verdict" id="pistV"></p>
+    </div>
+    <div class="panel">
+      <div class="ctl"><span class="lbl">Move the piston</span>
+        <div class="btns"><button type="button" data-pd="in" aria-pressed="true">In, to half</button><button type="button" data-pd="out">Out, to double</button></div>
+      </div>
+      <div class="ctl">
+        <label for="pSp"><span class="lt">Piston speed</span> <output id="pSpOut"></output></label>
+        <input type="range" id="pSp" min="-1.5" max="1.3" step="0.05" value="-1.3">
+        <small>In units of the molecules’ typical speed.</small>
+      </div>
+      <div class="ctl btns"><button type="button" class="primary" id="pistRun">Run</button><button type="button" id="pistReset">Reset</button></div>
+      <dl class="stats">
+        <dt>Energy change, \(\Delta U/U_i\)</dt><dd id="pi1">–</dd>
+        <dt>Quasistatic (isentropic)</dt><dd id="pi2">–</dd>
+        <dt>Entropy created, \(\Delta S/Nk_{\mathrm{B}}\)</dt><dd id="pi3">–</dd>
+      </dl>
+      <p class="cap" style="margin:.75rem 0 0">No heat flows, so \(\Delta U = W\). \(\Delta S\) is computed from the final length and energy, as if the gas then settled into equilibrium.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHEMICAL POTENTIAL ============ -->
+<section id="mu" aria-labelledby="h-mu">
+  <h2 id="h-mu">Diffusive equilibrium and chemical potential</h2>
+  <div class="prose">
+    <p>Now let two systems of the same species exchange both energy and particles (with volumes fixed, for simplicity). Maximizing \(S_{\text{total}}\) with \(dN_B = -dN_A\) gives \(T_A = T_B\) and \(\partial S_A/\partial N_A = \partial S_B/\partial N_B\). Multiplying by \(-T\) gives a quantity with units of energy, the <strong>chemical potential</strong>:</p>
+    <div class="eq"><span class="boxed">\( \displaystyle \mu \equiv -T\left(\frac{\partial S}{\partial N}\right)_{U,V} \)</span></div>
+    <p>with \(\mu_A = \mu_B\) in diffusive equilibrium. Out of equilibrium, the system with the larger \(\partial S/\partial N\), the smaller \(\mu\), gains particles, since it gains more entropy than the other loses. Particles flow from high \(\mu\) to low, like something running downhill, which is why the minus sign is the convention. Including \(N\) in the thermodynamic identity,</p>
+    <div class="eq multi"><span class="eqp">\( \displaystyle dS = \frac1T\,dU + \frac PT\,dV - \frac\mu T\,dN, \)</span><span class="eqp">\( \displaystyle dU = T\,dS - P\,dV + \mu\,dN \)</span></div>
+    <p>where \(-P\,dV\) is mechanical work and \(\mu\,dN\) chemical work. At fixed \(S\) and \(V\), \(\mu = (\partial U/\partial N)_{S,V}\): the energy change when one particle is added with the entropy and volume held fixed. Usually some energy must be removed to keep the multiplicity fixed, so \(\mu\) is negative; any potential energy the particle needs to enter the system adds to it.</p>
+  </div>
+
+  <h3>The smallest example</h3>
+  <p class="prose">An Einstein solid with \(N = 3\) and \(q = 3\) has \(\Omega = \binom{5}{3} = 10\). Adding an oscillator without changing \(q\) would raise it to \(\binom{6}{3} = 20\). To keep the entropy fixed, one unit of energy must go: \(N = 4\), \(q = 2\), \(\Omega = \binom{5}{2} = 10\). So \(\mu = (\Delta U/\Delta N)_S = -\varepsilon\), not quite a derivative and not quite realistic, but the idea is right.</p>
+  <div class="solids" aria-label="Before: three oscillators with energies 1, 2, 0. After: four oscillators with energies 1, 1, 0, 0.">
+    <div><div class="osc"><span class="cell"><span class="dot"></span></span><span class="cell"><span class="dot"></span><span class="dot"></span></span><span class="cell"></span></div><div class="cap" style="margin-left:0">N = 3, q = 3, Ω = 10</div></div>
+    <div class="arrow">→</div>
+    <div><div class="osc"><span class="cell"><span class="dot"></span></span><span class="cell"><span class="dot"></span></span><span class="cell"></span><span class="cell"></span></div><div class="cap" style="margin-left:0">N = 4, q = 2, Ω = 10</div></div>
+  </div>
+
+  <h3>The chemical potential of an ideal gas</h3>
+  <div class="prose">
+    <p>From the Sackur–Tetrode equation, with \(U = \tfrac32 Nk_{\mathrm{B}}T\),</p>
+    <div class="eq"><span class="boxed">\( \displaystyle \mu = -k_{\mathrm{B}}T\ln\!\left[\frac VN\left(\frac{2\pi mk_{\mathrm{B}}T}{h^2}\right)^{3/2}\right] \)</span></div>
+    <p>For helium at room temperature and atmospheric pressure, \(\mu \approx -0.32\) eV. Raising the concentration \(N/V\) at fixed temperature makes \(\mu\) less negative: the gas becomes more willing to give up particles to its neighbors.</p>
+  </div>
+  <div class="fig">
+    <div>
+      <div class="canvas-holder"><canvas id="muCanvas" aria-label="Chemical potential of an ideal gas versus pressure"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="ctl">
+        <label for="muGas"><span class="lt">Gas</span></label>
+        <select id="muGas"><option value="4.0026">Helium</option><option value="20.18">Neon</option><option value="39.948">Argon</option><option value="28.014">Nitrogen (as point particles)</option></select>
+      </div>
+      <div class="ctl">
+        <label for="muT"><span class="lt">Temperature</span> <output id="muTOut"></output></label>
+        <input type="range" id="muT" min="50" max="1000" step="5" value="300">
+      </div>
+      <div class="ctl">
+        <label for="muP"><span class="lt">Pressure</span> <output id="muPOut"></output></label>
+        <input type="range" id="muP" min="2" max="8" step="0.01" value="5">
+      </div>
+      <div class="big" id="muBig">–</div>
+      <p class="cap" style="margin:0">chemical potential per molecule</p>
+      <dl class="stats" style="margin-top:.75rem">
+        <dt>Per mole, \(N_A\mu\)</dt><dd id="muMol">–</dd>
+      </dl>
+      <p class="cap" style="margin:.75rem 0 0">Chemists usually quote \(\mu\) per mole, \(-T(\partial S/\partial n)_{U,V}\) with \(n = N/N_A\), which is \(N_A\) times the physicist’s per-particle value.</p>
+    </div>
+  </div>
+
+  <h3>Particles flow from high μ to low</h3>
+  <div class="prose">
+    <p>Two chambers of the same gas at the same temperature, joined by a small opening. At fixed \(T\), \(\mu = k_{\mathrm{B}}T\ln(N/V) + \text{constant}\), so the more crowded side has the higher \(\mu\) and loses particles until the concentrations, and the chemical potentials, are equal: \(\mu_A - \mu_B = k_{\mathrm{B}}T\ln[(N_A/V_A)/(N_B/V_B)]\).</p>
+  </div>
+  <div class="fig">
+    <div>
+      <div class="canvas-holder"><canvas id="difCanvas" aria-label="Two chambers of gas exchanging particles through an opening"></canvas></div>
+      <div class="canvas-holder" style="margin-top:.75rem"><canvas id="lvlCanvas" aria-label="Chemical potentials of the two chambers over time"></canvas></div>
+      <div class="legend">
+        <span><span class="swatch line" style="background:var(--a)"></span>\(\mu_A\)</span>
+        <span><span class="swatch line" style="background:var(--b)"></span>\(\mu_B\)</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ctl">
+        <label for="dVA"><span class="lt">Volume of A</span> <output id="dVAOut"></output></label>
+        <input type="range" id="dVA" min="0.25" max="0.75" step="0.05" value="0.5">
+      </div>
+      <div class="ctl btns"><button type="button" class="primary" id="dRun">Start with most in A</button><button type="button" id="dPlay">Pause</button></div>
+      <dl class="stats">
+        <dt>\(N_A,\ N_B\)</dt><dd id="dN">–</dd>
+        <dt>\((\mu_A - \mu_B)/k_{\mathrm{B}}T\)</dt><dd id="dMu">–</dd>
+      </dl>
+      <p class="cap" style="margin:.75rem 0 0">Noninteracting molecules at one temperature; the curves are smoothed over a short time.</p>
+    </div>
+  </div>
+
+  <h3>The atmosphere, once more</h3>
+  <div class="prose">
+    <p>Problem 3.37. A gas at height \(z\) has potential energy \(mgz\) per molecule, which adds to its chemical potential: \(\mu(z) = -k_{\mathrm{B}}T\ln[(V/N)(2\pi mk_{\mathrm{B}}T/h^2)^{3/2}] + mgz\). For two chunks at the same temperature and volume in diffusive equilibrium, \(\mu(z) = \mu(0)\) gives \(\ln[N(z)/N(0)] = -mgz/k_{\mathrm{B}}T\):</p>
+    <div class="eq">\[ N(z) = N(0)\,e^{-mgz/k_{\mathrm{B}}T} \]</div>
+    <p>the exponential atmosphere of Problem 1.16, now from the chemical potential. Higher up, each molecule has more potential energy, so the gas must be thinner there to keep \(\mu\) the same.</p>
+  </div>
+  <div class="fig">
+    <div>
+      <div class="canvas-holder"><canvas id="atmCanvas" aria-label="The two parts of the chemical potential versus altitude"></canvas></div>
+      <div class="legend">
+        <span><span class="swatch line" style="background:var(--ink)"></span>Total \(\mu\), the same at every height</span>
+        <span><span class="swatch dash" style="border-color:var(--gold)"></span>\(mgz\)</span>
+        <span><span class="swatch line" style="background:var(--acc)"></span>The concentration part</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ctl">
+        <label for="atGas"><span class="lt">Gas</span></label>
+        <select id="atGas"><option value="28.014">Nitrogen</option><option value="4.0026">Helium</option></select>
+      </div>
+      <div class="ctl">
+        <label for="atZ"><span class="lt">Height \(z\)</span> <output id="atZOut"></output></label>
+        <input type="range" id="atZ" min="0" max="30" step="0.1" value="8.8">
+      </div>
+      <dl class="stats">
+        <dt>\(mgz\)</dt><dd id="atM">–</dd>
+        <dt>\(N(z)/N(0)\)</dt><dd id="atN">–</dd>
+      </dl>
+      <p class="cap" style="margin:.75rem 0 0">At a uniform 280 K. Light helium thins out far more slowly.</p>
+    </div>
+  </div>
+  <div class="prose" style="margin-top:1.5rem">
+    <p>A system with several species has a chemical potential for each, \(\mu_i = -T(\partial S/\partial N_i)_{U,V,N_{j\ne i}}\), so \(dU = T\,dS - P\,dV + \sum_i\mu_i\,dN_i\), and in diffusive equilibrium each species’ \(\mu\) is separately equal. The chemical potential is central to equilibrium in chemical reactions and phase transformations, the subject of Chapter 5, and it plays a central role in quantum statistics, in Chapter 7.</p>
+  </div>
+</section>
+
+<!-- ============ SUMMARY ============ -->
+<section id="summary" aria-labelledby="h-sum">
+  <h2 id="h-sum">Summary of classical thermodynamics</h2>
+  <div class="prose">
+    <div class="eq"><span class="boxed">\( \displaystyle dU = T\,dS - P\,dV + \mu\,dN \)</span></div>
+  </div>
+  <div class="tblwrap">
+    <table class="sum">
+      <thead><tr><th>Type of interaction</th><th>Exchanged quantity</th><th>Governing variable</th><th>Formula</th></tr></thead>
+      <tbody>
+        <tr><td>Thermal</td><td>Energy</td><td>Temperature</td><td>\( \displaystyle \frac1T = \left(\frac{\partial S}{\partial U}\right)_{V,N} \)</td></tr>
+        <tr><td>Mechanical</td><td>Volume</td><td>Pressure</td><td>\( \displaystyle \frac PT = \left(\frac{\partial S}{\partial V}\right)_{U,N} \)</td></tr>
+        <tr><td>Diffusive</td><td>Particles</td><td>Chemical potential</td><td>\( \displaystyle \frac\mu T = -\left(\frac{\partial S}{\partial N}\right)_{U,V} \)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <p>For three model systems, the two-state paramagnet, the Einstein solid, and the monatomic ideal gas, the laws of microscopic physics give explicit formulas for the multiplicity \(\Omega\) and entropy \(k_{\mathrm{B}}\ln\Omega\), and from them heat capacities and a variety of other measurable quantities. That program is <strong>statistical mechanics</strong>.</p>
+  </div>
+</section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Created by Claude Opus 5.5, based on the lecture notes by Sang Hoon Lee (Statistical Physics 1, Chapter 3, Interactions and Implications, Sections 3.4 to 3.6, with Problems 3.33 and 3.37).</p>
+    <p>Constants: \(k_{\mathrm{B}} = 1.381 \times 10^{-23}\ \mathrm{J/K}\), \(h = 6.626 \times 10^{-34}\ \mathrm{J\,s}\), \(N_A = 6.022 \times 10^{23}\). Equations typeset with MathJax.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let C = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  ['bg','surface','ink','muted','rule','band','a','b','acc','vio','gold','res'].forEach(k => C[k] = cs.getPropertyValue('--'+k).trim());
+}
+readColors();
+const SANS = '"Instrument Sans", system-ui, sans-serif';
+const SERIF = '"Newsreader", Georgia, serif';
+function fit(cv, LW, LH){
+  const w = cv.parentElement.clientWidth || LW, hgt = w*LH/LW;
+  cv.style.height = hgt + 'px';
+  const d = window.devicePixelRatio || 1;
+  cv.width = Math.round(w*d); cv.height = Math.round(hgt*d);
+  const ctx = cv.getContext('2d'); const s = w*d/LW;
+  ctx.setTransform(s,0,0,s,0,0);
+  return ctx;
+}
+function rich(c, x, y, size, parts, align){
+  c.save(); c.textAlign = 'left';
+  const fontOf = st => st==='i' ? 'italic '+size+'px '+SERIF : st==='isub' ? 'italic '+(size*0.7)+'px '+SERIF : (st==='sub'||st==='sup') ? (size*0.7)+'px '+SERIF : st==='s' ? (size*0.88)+'px '+SANS : size+'px '+SERIF;
+  const widths = parts.map(([t,st]) => { c.font = fontOf(st); return c.measureText(t).width; });
+  const total = widths.reduce((a,b)=>a+b,0);
+  let cx = align==='center' ? x-total/2 : align==='right' ? x-total : x;
+  parts.forEach(([t,st],i) => { c.font = fontOf(st); const dy = (st==='sub'||st==='isub') ? size*0.25 : st==='sup' ? -size*0.38 : 0; c.fillText(t, cx, y+dy); cx += widths[i]; });
+  c.restore(); return total;
+}
+const signed = (x,d) => (x<0 && Math.abs(x).toFixed(d) !== (0).toFixed(d) ? '−' : '') + Math.abs(x).toFixed(d);
+function axes(c, W, H, box, xr, yr, xt, yt, xlab, ylab, xfmt, yfmt){
+  const [L,T,Rr,B] = box;
+  c.clearRect(0,0,W,H); c.fillStyle=C.surface; c.fillRect(0,0,W,H);
+  const X = v => L + (v-xr[0])/(xr[1]-xr[0])*(W-L-Rr), Y = v => H-B - (v-yr[0])/(yr[1]-yr[0])*(H-T-B);
+  c.font='12px '+SANS; c.fillStyle=C.muted; c.textAlign='center';
+  xt.forEach(v => { c.strokeStyle = C.band; c.lineWidth=1; c.beginPath(); c.moveTo(X(v),T); c.lineTo(X(v),H-B); c.stroke(); c.fillText(xfmt ? xfmt(v) : (v<0?'−'+Math.abs(v):String(v)), X(v), H-B+16); });
+  c.textAlign='right'; yt.forEach(v => { c.strokeStyle = v===0 ? C.rule : C.band; c.beginPath(); c.moveTo(L,Y(v)); c.lineTo(W-Rr,Y(v)); c.stroke(); c.fillText(yfmt ? yfmt(v) : (v<0?'−'+Math.abs(v):String(v)), L-6, Y(v)+4); });
+  c.fillStyle=C.muted; if (xlab) rich(c, W-Rr-2, H-8, 14, xlab, 'right');
+  if (ylab){ c.save(); c.globalAlpha=0.85; c.fillStyle=C.surface; c.fillRect(L+2, T-2, 220, 20); c.restore(); c.fillStyle=C.muted; rich(c, L+6, T+12, 14, ylab, 'left'); }
+  c.strokeStyle=C.muted; c.lineWidth=1; c.beginPath(); c.moveTo(L,T); c.lineTo(L,H-B); c.lineTo(W-Rr,H-B); c.stroke();
+  return {X, Y};
+}
+function hexToRgb(hx){ const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec((hx||'').trim()); return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [128,128,128]; }
+let rs = (Date.now() ^ 0x9e3779b9) >>> 0 || 1;
+const rnd = () => { rs ^= rs << 13; rs >>>= 0; rs ^= rs >>> 17; rs ^= rs << 5; rs >>>= 0; return rs / 4294967296; };
+const gauss = () => { let u=0; while(!u) u=rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd()); };
+const kB = 1.380649e-23, h = 6.62607015e-34, amu = 1.66053907e-27, eV = 1.602176634e-19, NAv = 6.02214076e23;
+
+/* ================= ENTROPY SURFACE + PARTITION ================= */
+const PE = {NT:200, NA:120, u:0.2, v:0.8, path:[], running:false, yaw:-0.62, pitch:0.55, drag:null};
+// S_total/k up to a constant, with u = U_A/U_tot and v = V_A/V_tot
+const Stot = (u, v) => { const a = PE.NA, b = PE.NT - PE.NA; return 1.5*a*Math.log(u) + a*Math.log(v) + 1.5*b*Math.log(1-u) + b*Math.log(1-v); };
+const fA = () => PE.NA/PE.NT;
+function sProj(x, y, z){ const X = x - 0.5, Y = y - 0.5, Z = z*0.55; const cy = Math.cos(PE.yaw), sy = Math.sin(PE.yaw), cp = Math.cos(PE.pitch), sp = Math.sin(PE.pitch); const xr = cy*X - sy*Y, yr = sy*X + cy*Y; return {X: 320 + xr*340, Y: 290 - (yr*sp + Z*cp)*340, d: yr*cp - Z*sp}; }
+function surfRender(){
+  const c = sfCtx; if (!c) return;
+  const W=640, H=440; c.clearRect(0,0,W,H); c.fillStyle=C.surface; c.fillRect(0,0,W,H);
+  const smax = Stot(fA(), fA()), span = 2.5*PE.NT; // display: z = 1 + (S - Smax)/span, floored at 0
+  const zf = (u, v) => Math.max(0, 1 + (Stot(u, v) - smax)/span);
+  const n = 34, g = []; for (let i=0;i<n;i++) g.push(0.02 + 0.96*i/(n-1));
+  const P = g.map(u => g.map(v => { const z = zf(u, v); return {z, p: sProj(u, v, z)}; }));
+  const corners = [[0,0],[1,0],[1,1],[0,1]].map(([x,y]) => sProj(x, y, 0));
+  c.strokeStyle=C.rule; c.lineWidth=1; c.beginPath(); corners.forEach((p,k) => k ? c.lineTo(p.X,p.Y) : c.moveTo(p.X,p.Y)); c.closePath(); c.stroke();
+  const lo = hexToRgb(C.band), hi = hexToRgb(C.acc), quads = [];
+  for (let i=0;i<n-1;i++) for (let j=0;j<n-1;j++){ const a = P[i][j], b = P[i+1][j], cc = P[i+1][j+1], d = P[i][j+1]; quads.push({pts:[a.p,b.p,cc.p,d.p], z:(a.z+b.z+cc.z+d.z)/4, depth:(a.p.d+b.p.d+cc.p.d+d.p.d)/4}); }
+  // path points get sorted in with the quads, so the trail is hidden behind the hill when it should be
+  const pathItems = PE.path.map((q,k) => ({path:true, k, p: sProj(q[0], q[1], zf(q[0], q[1]) + 0.004), depth: sProj(q[0], q[1], zf(q[0], q[1])).d - 0.002}));
+  const items = quads.concat(pathItems).sort((A,B) => B.depth - A.depth);
+  items.forEach(q => {
+    if (q.path){ c.fillStyle = C.a; c.beginPath(); c.arc(q.p.X, q.p.Y, q.k === PE.path.length-1 ? 6 : 2.2, 0, 7); c.fill(); return; }
+    const t = Math.min(1, q.z); const col = lo.map((v,k) => Math.round(v + (hi[k]-v)*t*t)); c.fillStyle = 'rgb(' + col.join(',') + ')';
+    c.beginPath(); q.pts.forEach((p,k) => k ? c.lineTo(p.X,p.Y) : c.moveTo(p.X,p.Y)); c.closePath(); c.fill();
+    c.save(); c.globalAlpha=0.3; c.strokeStyle=C.surface; c.lineWidth=0.6; c.stroke(); c.restore();
+  });
+  const lab = (x, y, parts) => { const p = sProj(x, y, 0); c.fillStyle=C.muted; rich(c, p.X, p.Y + 18, 14, parts, 'center'); };
+  lab(0.5, -0.12, [['U','i'],['A','isub'],[' / ','r'],['U','i'],['total','sub']]);
+  lab(1.14, 0.5, [['V','i'],['A','isub'],[' / ','r'],['V','i'],['total','sub']]);
+  const cs = [[0,0],[1,0],[1,1],[0,1]].map(([x,y]) => ({x, y, p: sProj(x, y, 0)})).sort((a,b) => a.p.X - b.p.X)[0];
+  const o1 = sProj(cs.x, cs.y, 1); c.strokeStyle=C.muted; c.beginPath(); c.moveTo(cs.p.X, cs.p.Y); c.lineTo(o1.X, o1.Y); c.stroke();
+  c.fillStyle=C.muted; rich(c, o1.X + 6, o1.Y - 8, 14, [['S','i'],['total','sub']], 'left');
+}
+function partRender(){
+  const a = PE.NA, b = PE.NT - a, u = PE.u, v = PE.v, f = fA();
+  const TA = u/f, TB = (1-u)/(1-f), PA = (f/v)*TA, PB = ((1-f)/(1-v))*TB;
+  $('pNAOut').textContent = a + ' (B: ' + b + ')'; $('pU0Out').textContent = (+$('pU0').value).toFixed(2); $('pV0Out').textContent = (+$('pV0').value).toFixed(2);
+  $('pT').textContent = TA.toFixed(2) + ', ' + TB.toFixed(2); $('pP').textContent = PA.toFixed(2) + ', ' + PB.toFixed(2);
+  $('pS').textContent = signed(Stot(u, v) - Stot(f, f), 1);
+  const c = ptCtx; if (!c) return;
+  const W=640, H=150; c.clearRect(0,0,W,H); c.fillStyle=C.surface; c.fillRect(0,0,W,H);
+  const x0 = 30, w = W-60, y0 = 20, hh = 100, xp = x0 + v*w;
+  const tcol = (t) => { const r = hexToRgb(C.b), q = hexToRgb(C.a), m = Math.max(0, Math.min(1, (t - 0.4)/1.4)); return 'rgba(' + r.map((x,k) => Math.round(x + (q[k]-x)*m)).join(',') + ',0.18)'; };
+  c.fillStyle = tcol(TA); c.fillRect(x0, y0, xp-x0, hh); c.fillStyle = tcol(TB); c.fillRect(xp, y0, x0+w-xp, hh);
+  c.strokeStyle=C.ink; c.lineWidth=2; c.strokeRect(x0, y0, w, hh); c.fillStyle=C.ink; c.fillRect(xp-3, y0, 6, hh);
+  // dots: density shows N/V
+  let s = 7; const r = () => { s = (s*16807) % 2147483647; return s/2147483647; };
+  c.fillStyle=C.ink; for (let k=0;k<a;k++){ c.beginPath(); c.arc(x0 + 4 + r()*(xp-x0-10), y0 + 4 + r()*(hh-8), 1.6, 0, 7); c.fill(); }
+  for (let k=0;k<b;k++){ c.beginPath(); c.arc(xp + 6 + r()*(x0+w-xp-10), y0 + 4 + r()*(hh-8), 1.6, 0, 7); c.fill(); }
+  c.font='600 13px '+SANS; c.textAlign='center'; c.fillStyle=C.ink; c.fillText('A', (x0+xp)/2, y0+hh+20); c.fillText('B', (xp+x0+w)/2, y0+hh+20);
+  c.font='12px '+SANS; c.fillStyle=C.muted; c.textAlign='left'; c.fillText('Shading: blue is cooler, red warmer. Dot density shows N/V.', x0, 14);
+}
+function peReset(){ PE.NA = +$('pNA').value; PE.u = +$('pU0').value; PE.v = +$('pV0').value; PE.path = [[PE.u, PE.v]]; PE.running = false; }
+function peStep(){
+  // gradient ascent on S_total: energy flows toward the colder side, the partition moves toward lower pressure
+  const a = PE.NA, b = PE.NT - a, gu = 1.5*(a/PE.u - b/(1-PE.u)), gv = a/PE.v - b/(1-PE.v);
+  const rate = 0.00012;
+  PE.u = Math.min(0.98, Math.max(0.02, PE.u + rate*gu*PE.u*(1-PE.u))); PE.v = Math.min(0.98, Math.max(0.02, PE.v + rate*gv*PE.v*(1-PE.v)));
+  PE.path.push([PE.u, PE.v]);
+  if (Math.abs(gu) < 0.5 && Math.abs(gv) < 0.5) PE.running = false;
+}
+['pNA','pU0','pV0'].forEach(id => $(id).addEventListener('input', () => { peReset(); partRender(); surfRender(); }));
+$('pGo').addEventListener('click', () => { if (PE.path.length > 1 && !PE.running) peReset(); if (reduceMotion){ for (let k=0;k<4000 && (PE.running = true);k++){ peStep(); if (!PE.running) break; } partRender(); surfRender(); return; } PE.running = true; });
+const sCv = $('surfCanvas');
+sCv.addEventListener('pointerdown', e => { PE.drag = {x:e.clientX, y:e.clientY, yaw:PE.yaw, pitch:PE.pitch}; sCv.setPointerCapture(e.pointerId); sCv.style.cursor='grabbing'; });
+sCv.addEventListener('pointermove', e => { if (!PE.drag) return; PE.yaw = PE.drag.yaw - (e.clientX-PE.drag.x)*0.01; PE.pitch = Math.max(0.12, Math.min(1.45, PE.drag.pitch + (e.clientY-PE.drag.y)*0.008)); surfRender(); });
+const sEnd = () => { PE.drag = null; sCv.style.cursor='grab'; }; sCv.addEventListener('pointerup', sEnd); sCv.addEventListener('pointercancel', sEnd);
+sCv.addEventListener('keydown', e => { const k = {ArrowLeft:[0.12,0], ArrowRight:[-0.12,0], ArrowUp:[0,0.08], ArrowDown:[0,-0.08]}[e.key]; if (!k) return; e.preventDefault(); PE.yaw += k[0]; PE.pitch = Math.max(0.12, Math.min(1.45, PE.pitch + k[1])); surfRender(); });
+
+/* ================= PISTON (1D gas) ================= */
+const PI = {N:300, dir:'in', lsp:-1.3, x:null, v:null, y:null, X:1, U0:0, running:false, done:false};
+function piReset(){
+  PI.x = new Float64Array(PI.N); PI.v = new Float64Array(PI.N); PI.y = new Float64Array(PI.N);
+  for (let i=0;i<PI.N;i++){ PI.x[i] = rnd(); PI.v[i] = gauss(); PI.y[i] = rnd(); }
+  PI.X = 1; PI.U0 = 0; for (let i=0;i<PI.N;i++) PI.U0 += PI.v[i]*PI.v[i]/2; PI.running = false; PI.done = false; piInfo();
+}
+const Lf = () => PI.dir === 'in' ? 0.5 : 2;
+function piStep(dt){
+  const up = Math.pow(10, PI.lsp), s = PI.dir === 'in' ? -1 : 1, L = Lf();
+  let X = PI.X + s*up*dt; if ((s < 0 && X <= L) || (s > 0 && X >= L)){ X = L; PI.running = false; PI.done = true; }
+  PI.X = X; const w = s*up;
+  for (let i=0;i<PI.N;i++){ let x = PI.x[i] + PI.v[i]*dt, v = PI.v[i];
+    if (x < 0){ x = -x; v = -v; }
+    if (x > X){ x = 2*X - x; v = 2*w - v; }  // elastic bounce off a wall moving at speed w
+    PI.x[i] = x; PI.v[i] = v; }
+}
+function piU(){ let U = 0; for (let i=0;i<PI.N;i++) U += PI.v[i]*PI.v[i]/2; return U; }
+function piInfo(){
+  const up = Math.pow(10, PI.lsp);
+  $('pSpOut').textContent = up.toPrecision(2) + '×';
+  document.querySelectorAll('[data-pd]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pd === PI.dir)));
+  const L = PI.X, U = piU(), dU = U/PI.U0 - 1, Uq = Math.pow(1/L, 2), dS = Math.log(L) + 0.5*Math.log(U/PI.U0);
+  $('pi1').textContent = (dU >= 0 ? '+' : '') + signed(dU, 3); $('pi2').textContent = (Uq-1 >= 0 ? '+' : '') + signed(Uq - 1, 3);
+  $('pi3').textContent = (dS >= 0 ? '+' : '') + signed(dS, 3);
+  $('pistRun').disabled = PI.running;
+  $('pistV').textContent = !PI.done ? (PI.running ? 'Moving…' : 'Choose a speed and press Run.') :
+    Math.abs(dS) < 0.02 ? 'Slow enough to be essentially quasistatic: isentropic, ΔS ≈ 0.' :
+    PI.dir === 'in' ? 'Too fast: the piston did more work than −P dV, creating entropy, ΔS > 0.' :
+    (U/PI.U0 > 0.97 ? 'Faster than the molecules: free expansion, no work at all, and ΔS = Nk ln 2 ≈ 0.693 Nk.' : 'Too fast to be quasistatic: the gas did less work than P dV, so entropy was created.');
+}
+function piDraw(){
+  const c = piCtx; if (!c) return;
+  const W=640, H=220; c.clearRect(0,0,W,H); c.fillStyle=C.surface; c.fillRect(0,0,W,H);
+  const x0 = 24, sc = 290, y0 = 30, hh = 150;
+  c.strokeStyle=C.ink; c.lineWidth=2.5; c.beginPath(); c.moveTo(x0 + 2.05*sc, y0); c.lineTo(x0, y0); c.lineTo(x0, y0+hh); c.lineTo(x0 + 2.05*sc, y0+hh); c.stroke();
+  const xp = x0 + PI.X*sc; c.fillStyle=C.ink; c.fillRect(xp, y0+2, 7, hh-4); c.fillRect(xp+7, y0+hh/2-4, 40, 8);
+  c.fillStyle=C.acc; for (let i=0;i<PI.N;i++){ const sp = Math.min(1, Math.abs(PI.v[i])/3); c.globalAlpha = 0.45 + 0.55*sp; c.beginPath(); c.arc(x0 + PI.x[i]*sc, y0 + 6 + PI.y[i]*(hh-12), 2.2, 0, 7); c.fill(); }
+  c.globalAlpha=1; c.strokeStyle=C.res; c.setLineDash([3,4]); c.lineWidth=1; const xl = x0 + Lf()*sc; c.beginPath(); c.moveTo(xl, y0-6); c.lineTo(xl, y0+hh+6); c.stroke(); c.setLineDash([]);
+  c.fillStyle=C.muted; c.font='12px '+SANS; c.textAlign='center'; c.fillText('target', xl, y0+hh+20);
+  c.textAlign='left'; c.fillText('Molecules move only left and right; brighter ones are faster.', x0, 18);
+}
+document.querySelectorAll('[data-pd]').forEach(b => b.addEventListener('click', () => { PI.dir = b.dataset.pd; piReset(); piDraw(); }));
+$('pSp').addEventListener('input', e => { PI.lsp = +e.target.value; if (!PI.running){ piReset(); piDraw(); } piInfo(); });
+$('pistRun').addEventListener('click', () => { if (PI.done) piReset(); PI.running = true; piInfo(); });
+$('pistReset').addEventListener('click', () => { piReset(); piDraw(); });
+
+/* ================= IDEAL GAS CHEMICAL POTENTIAL ================= */
+function muOf(M, T, P){ const m = M*amu, VN = kB*T/P; return -kB*T*Math.log(VN*Math.pow(2*Math.PI*m*kB*T/(h*h), 1.5)); }
+function muRender(){
+  const M = +$('muGas').value, T = +$('muT').value, P = Math.pow(10, +$('muP').value);
+  $('muTOut').textContent = T + ' K'; $('muPOut').textContent = P >= 1e5 ? (P/101325).toPrecision(3) + ' atm' : (P >= 1000 ? (P/1000).toPrecision(3) + ' kPa' : P.toPrecision(3) + ' Pa');
+  const mu = muOf(M, T, P)/eV; $('muBig').textContent = signed(mu, 3) + ' eV'; $('muMol').textContent = signed(mu*eV*NAv/1000, 1) + ' kJ/mol';
+  const c = muCtx; if (!c) return;
+  const W=640, H=320, ax = axes(c, W, H, [52,16,16,40], [2,8], [-0.8,0.1], [2,3,4,5,6,7,8], [-0.8,-0.6,-0.4,-0.2,0], [['pressure (Pa, log scale)','s']], [['μ','i'],['  (eV)','s']], v => v===5 ? '10⁵' : '10' + String(v).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]));
+  [[300, C.acc, 2.6],[T, C.vio, 2.6]].forEach(([TT,col,w],k) => { if (k === 1 && TT === 300) return; c.strokeStyle=col; c.lineWidth=w; c.setLineDash(k ? [6,4] : []); c.beginPath(); for (let i=0;i<=120;i++){ const lp = 2 + 6*i/120, y = ax.Y(muOf(M, TT, Math.pow(10, lp))/eV); i?c.lineTo(ax.X(lp),y):c.moveTo(ax.X(lp),y); } c.stroke(); c.setLineDash([]); });
+  c.fillStyle=C.muted; c.font='12px '+SANS; c.textAlign='left'; c.fillText('300 K', ax.X(7.3), ax.Y(muOf(M, 300, Math.pow(10,7.3))/eV) - 8);
+  if (T !== 300){ c.fillStyle=C.vio; c.fillText(T + ' K', ax.X(2.2), ax.Y(muOf(M, T, Math.pow(10,2.2))/eV) + 16); }
+  c.fillStyle=C.ink; c.beginPath(); c.arc(ax.X(+$('muP').value), ax.Y(mu), 6, 0, 7); c.fill();
+  c.fillStyle=C.muted; c.textAlign='right'; c.fillText('higher pressure, higher concentration: μ less negative →', W-20, 34);
+}
+['muGas','muT','muP'].forEach(id => $(id).addEventListener('input', muRender));
+
+/* ================= DIFFUSION BETWEEN CHAMBERS ================= */
+const DF = {n:500, va:0.5, p:[], run:!reduceMotion, hist:[], t:0};
+function dfInit(){
+  DF.p = []; for (let i=0;i<DF.n;i++){ const inA = rnd() < 0.85, a = rnd()*2*Math.PI, s = 0.6 + rnd()*0.6; DF.p.push({x: inA ? rnd()*DF.va*0.98 : DF.va + 0.01 + rnd()*(1-DF.va-0.02), y: rnd(), vx: Math.cos(a)*s, vy: Math.sin(a)*s}); }
+  DF.hist = []; DF.t = 0;
+}
+function dfStep(dt){
+  const w = DF.va, gap0 = 0.3, gap1 = 0.7;
+  for (const q of DF.p){
+    let nx = q.x + q.vx*dt, ny = q.y + q.vy*dt;
+    if (ny < 0){ ny = -ny; q.vy = -q.vy; } else if (ny > 1){ ny = 2-ny; q.vy = -q.vy; }
+    if (nx < 0){ nx = -nx; q.vx = -q.vx; } else if (nx > 1){ nx = 2-nx; q.vx = -q.vx; }
+    if ((q.x < w) !== (nx < w)){ const yc = q.y + (ny - q.y)*(w - q.x)/(nx - q.x); if (yc < gap0 || yc > gap1){ nx = 2*w - nx; q.vx = -q.vx; } }
+    q.x = nx; q.y = ny;
+  }
+  DF.t += dt;
+}
+function dfCounts(){ let a = 0; for (const q of DF.p) if (q.x < DF.va) a++; return [a, DF.n - a]; }
+function dfInfo(){
+  const [a, b] = dfCounts();
+  $('dVAOut').textContent = Math.round(DF.va*100) + '% of the total'; $('dN').textContent = a + ', ' + b;
+  const dmu = (a > 0 && b > 0) ? Math.log((a/DF.va)/(b/(1-DF.va))) : NaN;
+  $('dMu').textContent = isFinite(dmu) ? signed(dmu, 2) : '–'; $('dPlay').textContent = DF.run ? 'Pause' : 'Play';
+}
+function dfDraw(){
+  const c = dfCtx; if (!c) return;
+  const W=640, H=220, x0 = 20, y0 = 14, w = W-40, hh = H-28, xw = x0 + DF.va*w;
+  c.clearRect(0,0,W,H); c.fillStyle=C.surface; c.fillRect(0,0,W,H);
+  c.strokeStyle=C.ink; c.lineWidth=2; c.strokeRect(x0, y0, w, hh);
+  c.beginPath(); c.moveTo(xw, y0); c.lineTo(xw, y0 + 0.3*hh); c.moveTo(xw, y0 + 0.7*hh); c.lineTo(xw, y0+hh); c.stroke();
+  for (const q of DF.p){ c.fillStyle = q.x < DF.va ? C.a : C.b; c.beginPath(); c.arc(x0 + q.x*w, y0 + q.y*hh, 2.6, 0, 7); c.fill(); }
+  c.fillStyle=C.ink; c.font='600 13px '+SANS; c.textAlign='left'; c.fillText('A', x0+8, y0+18); c.textAlign='right'; c.fillText('B', x0+w-8, y0+18);
+  // level chart
+  const l = lvCtx; if (!l) return;
+  const [a, b] = dfCounts(); const muA = Math.log(Math.max(a,1)/DF.va/(DF.n)), muB = Math.log(Math.max(b,1)/(1-DF.va)/DF.n);
+  DF.hist.push([DF.t, muA, muB]); if (DF.hist.length > 900) DF.hist.shift();
+  const sm = (k, i) => { let s = 0, n = 0; for (let j=Math.max(0,i-12); j<=i; j++){ s += DF.hist[j][k]; n++; } return s/n; };
+  const LW=640, LH=200, t0 = DF.hist[0][0], t1 = Math.max(t0 + 20, DF.t);
+  const ax = axes(l, LW, LH, [56,16,16,36], [t0, t1], [-3.2, 1.2], [], [-3,-2,-1,0,1], [['time','s']], [['μ','i'],[' / ','r'],['k','i'],['B','sub'],['T','i'],['  (relative)','s']], null, v => v===0 ? '0' : signed(v,0));
+  [[1, C.a],[2, C.b]].forEach(([k,col]) => { l.strokeStyle=col; l.lineWidth=2.4; l.beginPath(); DF.hist.forEach((hh,i) => { const x = ax.X(hh[0]), y = ax.Y(sm(k, i)); i?l.lineTo(x,y):l.moveTo(x,y); }); l.stroke(); });
+}
+$('dVA').addEventListener('input', e => { DF.va = +e.target.value; dfInit(); dfDraw(); dfInfo(); });
+$('dRun').addEventListener('click', () => { dfInit(); DF.run = true; dfDraw(); dfInfo(); });
+$('dPlay').addEventListener('click', () => { DF.run = !DF.run; dfInfo(); });
+
+/* ================= ATMOSPHERE FROM MU ================= */
+function atRender(){
+  const M = +$('atGas').value, z = +$('atZ').value*1000, T = 280, m = M*amu, g = 9.81, kT = kB*T;
+  $('atZOut').textContent = (z/1000).toFixed(1) + ' km';
+  $('atM').textContent = (m*g*z/eV*1000).toFixed(1) + ' meV'; $('atN').textContent = Math.exp(-m*g*z/kT).toPrecision(3);
+  const c = atCtx; if (!c) return;
+  const W=640, H=320, mgmax = m*g*30000/eV*1000, top = Math.max(60, mgmax*1.1);
+  const ax = axes(c, W, H, [56,16,16,40], [0,30], [-top, top], [0,5,10,15,20,25,30], [-Math.round(top/2/10)*10, 0, Math.round(top/2/10)*10], [['height (km)','s']], [['energy relative to μ (meV)','s']]);
+  c.strokeStyle=C.ink; c.lineWidth=2.4; c.beginPath(); c.moveTo(ax.X(0), ax.Y(0)); c.lineTo(ax.X(30), ax.Y(0)); c.stroke();
+  c.strokeStyle=C.gold; c.setLineDash([6,4]); c.lineWidth=2; c.beginPath(); for (let i=0;i<=60;i++){ const zz = 30*i/60; const y = ax.Y(Math.min(top, m*g*zz*1000/eV*1000)); i?c.lineTo(ax.X(zz),y):c.moveTo(ax.X(zz),y); } c.stroke(); c.setLineDash([]);
+  c.strokeStyle=C.acc; c.lineWidth=2.6; c.beginPath(); for (let i=0;i<=60;i++){ const zz = 30*i/60; const y = ax.Y(Math.max(-top, -m*g*zz*1000/eV*1000)); i?c.lineTo(ax.X(zz),y):c.moveTo(ax.X(zz),y); } c.stroke();
+  c.strokeStyle=C.muted; c.globalAlpha=.4; c.lineWidth=1; c.beginPath(); c.moveTo(ax.X(z/1000), 16); c.lineTo(ax.X(z/1000), H-40); c.stroke(); c.globalAlpha=1;
+  c.fillStyle=C.muted; c.font='12px '+SANS; c.textAlign='left'; c.fillText('kinetic (concentration) part falls as the gas thins out', ax.X(1), ax.Y(-top*0.82));
+}
+['atGas','atZ'].forEach(id => $(id).addEventListener('input', atRender));
+
+/* ================= LAYOUT + LOOP ================= */
+let sfCtx, ptCtx, piCtx, muCtx, dfCtx, lvCtx, atCtx;
+function layout(){
+  sfCtx = fit($('surfCanvas'), 640, 440); ptCtx = fit($('partCanvas'), 640, 150); piCtx = fit($('pistCanvas'), 640, 220);
+  muCtx = fit($('muCanvas'), 640, 320); dfCtx = fit($('difCanvas'), 640, 220); lvCtx = fit($('lvlCanvas'), 640, 200); atCtx = fit($('atmCanvas'), 640, 320);
+  redrawAll();
+}
+function redrawAll(){ surfRender(); partRender(); piDraw(); piInfo(); muRender(); dfDraw(); dfInfo(); atRender(); }
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 80); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); redrawAll(); });
+const vis = {pe:true, pi:true, df:true};
+const io = new IntersectionObserver(es => es.forEach(e => { vis[e.target.dataset.key] = e.isIntersecting; }));
+[['surfCanvas','pe'],['partCanvas','pe'],['pistCanvas','pi'],['difCanvas','df'],['lvlCanvas','df']].forEach(([id,k]) => { $(id).dataset.key = k; io.observe($(id)); });
+let last = performance.now(), infoT = 0;
+function loop(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now; infoT += dt;
+  if (PE.running && vis.pe){ for (let k=0;k<6 && PE.running;k++) peStep(); partRender(); surfRender(); }
+  if (PI.running && vis.pi){
+    // spread the run over about 4 s however slow the piston, with small enough steps for accuracy
+    const up = Math.pow(10, PI.lsp), simT = Math.abs(Lf() - 1)/up, perFrame = simT/(4*60), sub = Math.max(1, Math.ceil(perFrame/0.0015));
+    for (let k=0;k<sub && PI.running;k++) piStep(perFrame/sub);
+    piDraw(); if (infoT > 0.1 || !PI.running){ infoT = 0; piInfo(); }
+  }
+  if (DF.run && vis.df){ for (let k=0;k<3;k++) dfStep(dt*1.2/3); dfDraw(); if (infoT > 0.2){ infoT = 0; dfInfo(); } }
+  requestAnimationFrame(loop);
+}
+peReset(); piReset(); dfInit();
+layout();
+requestAnimationFrame(loop);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(redrawAll);
+})();
+</script>
+</body>
+</html>
