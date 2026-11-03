@@ -55,6 +55,7 @@ p{margin:0 0 1rem}
 .multi.chain{column-gap:.35em}
 mjx-container{color:inherit}
 mjx-container[display="true"]{margin:0 !important}
+mjx-assistive-mml{max-width:100%}
 .stats mjx-container,.legend mjx-container,.cap mjx-container,.ctl small mjx-container,table mjx-container{font-size:105%}
 .ctl output mjx-container{font-size:95%}
 .boxed{display:inline-block;border:1.5px solid var(--acc);padding:.5rem 1rem;border-radius:3px}
@@ -182,7 +183,7 @@ button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; st
 <section id="identity" aria-labelledby="h-id">
   <h2 id="h-id">The thermodynamic identity</h2>
   <div class="prose">
-    <p>Change \(U\) and \(V\) together in two small steps and the entropy changes by \(dS = (\partial S/\partial U)_V\,dU + (\partial S/\partial V)_U\,dV = dU/T + P\,dV/T\), or</p>
+    <p>Change \(U\) and \(V\) together in two small steps and the entropy changes by \(dS = (\partial S/\partial U)_V\,dU + (\partial S/\partial V)_U\,dV\) \(= dU/T + P\,dV/T\), or</p>
     <div class="eq"><span class="boxed">\( \displaystyle dU = T\,dS - P\,dV \)</span></div>
     <p>the <strong>thermodynamic identity</strong>, true for any infinitesimal change. Everything above follows from it: at fixed \(V\), \(1/T = (\partial S/\partial U)_V\); at fixed \(U\), \(P = T(\partial S/\partial V)_U\). It also gives \(C_V = T(\partial S/\partial T)_V\) and, from \(dH = T\,dS + V\,dP\), \(C_P = T(\partial S/\partial T)_P\) (Problem 3.33). It is tempting to match it with \(dU = Q + W\), with \(Q = T\,dS\) and \(W = -P\,dV\), but that holds only if the volume changes quasistatically (so the pressure is uniform throughout), no other work is done, and nothing else changes. Then</p>
     <div class="eq multi"><span class="eqp">\( \displaystyle Q = T\,dS \quad(\text{quasistatic}), \)</span><span class="eqp">\( \displaystyle (\Delta S)_P = \int_{T_i}^{T_f}\frac{C_P}{T}\,dT \)</span></div>
@@ -534,7 +535,11 @@ function muRender(){
   $('muTOut').textContent = T + ' K'; $('muPOut').textContent = P >= 1e5 ? (P/101325).toPrecision(3) + ' atm' : (P >= 1000 ? (P/1000).toPrecision(3) + ' kPa' : P.toPrecision(3) + ' Pa');
   const mu = muOf(M, T, P)/eV; $('muBig').textContent = signed(mu, 3) + ' eV'; $('muMol').textContent = signed(mu*eV*NAv/1000, 1) + ' kJ/mol';
   const c = muCtx; if (!c) return;
-  const W=640, H=320, ax = axes(c, W, H, [52,16,16,40], [2,8], [-0.8,0.1], [2,3,4,5,6,7,8], [-0.8,-0.6,-0.4,-0.2,0], [['pressure (Pa, log scale)','s']], [['μ','i'],['  (eV)','s']], v => v===5 ? '10⁵' : '10' + String(v).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]));
+  // widen the default μ range when the curves or the current point would leave it (μ falls with T and rises with P)
+  const ends = [300, T].flatMap(TT => [muOf(M, TT, 1e2)/eV, muOf(M, TT, 1e8)/eV]).concat(mu), lo = Math.min(...ends), hi = Math.max(...ends);
+  const y0 = Math.min(-0.8, Math.floor((lo - 0.05)/0.2)*0.2), y1 = Math.max(0.1, hi + 0.1), st = y1 - y0 > 1.4 ? 0.5 : 0.2, yt = [];
+  for (let k = Math.ceil(y0/st - 1e-9); k <= Math.floor(y1/st + 1e-9); k++) yt.push(+(k*st).toFixed(2));
+  const W=640, H=320, ax = axes(c, W, H, [52,16,16,40], [2,8], [y0,y1], [2,3,4,5,6,7,8], yt, [['pressure (Pa, log scale)','s']], [['μ','i'],['  (eV)','s']], v => v===5 ? '10⁵' : '10' + String(v).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]));
   [[300, C.acc, 2.6],[T, C.vio, 2.6]].forEach(([TT,col,w],k) => { if (k === 1 && TT === 300) return; c.strokeStyle=col; c.lineWidth=w; c.setLineDash(k ? [6,4] : []); c.beginPath(); for (let i=0;i<=120;i++){ const lp = 2 + 6*i/120, y = ax.Y(muOf(M, TT, Math.pow(10, lp))/eV); i?c.lineTo(ax.X(lp),y):c.moveTo(ax.X(lp),y); } c.stroke(); c.setLineDash([]); });
   c.fillStyle=C.muted; c.font='12px '+SANS; c.textAlign='left'; c.fillText('300 K', ax.X(7.3), ax.Y(muOf(M, 300, Math.pow(10,7.3))/eV) - 8);
   if (T !== 300){ c.fillStyle=C.vio; c.fillText(T + ' K', ax.X(2.2), ax.Y(muOf(M, T, Math.pow(10,2.2))/eV) + 16); }
@@ -547,8 +552,10 @@ function muRender(){
 const DF = {n:500, va:0.5, p:[], run:!reduceMotion, hist:[], t:0};
 function dfInit(){
   DF.p = []; for (let i=0;i<DF.n;i++){ const inA = rnd() < 0.85, a = rnd()*2*Math.PI, s = 0.6 + rnd()*0.6; DF.p.push({x: inA ? rnd()*DF.va*0.98 : DF.va + 0.01 + rnd()*(1-DF.va-0.02), y: rnd(), vx: Math.cos(a)*s, vy: Math.sin(a)*s}); }
-  DF.hist = []; DF.t = 0;
+  DF.hist = []; DF.t = 0; dfSample();
 }
+// one μ sample per physics update (not per redraw), at most 900 kept
+function dfSample(){ const [a, b] = dfCounts(); DF.hist.push([DF.t, Math.log(Math.max(a,1)/DF.va/DF.n), Math.log(Math.max(b,1)/(1-DF.va)/DF.n)]); if (DF.hist.length > 900) DF.hist.shift(); }
 function dfStep(dt){
   const w = DF.va, gap0 = 0.3, gap1 = 0.7;
   for (const q of DF.p){
@@ -577,8 +584,6 @@ function dfDraw(){
   c.fillStyle=C.ink; c.font='600 13px '+SANS; c.textAlign='left'; c.fillText('A', x0+8, y0+18); c.textAlign='right'; c.fillText('B', x0+w-8, y0+18);
   // level chart
   const l = lvCtx; if (!l) return;
-  const [a, b] = dfCounts(); const muA = Math.log(Math.max(a,1)/DF.va/(DF.n)), muB = Math.log(Math.max(b,1)/(1-DF.va)/DF.n);
-  DF.hist.push([DF.t, muA, muB]); if (DF.hist.length > 900) DF.hist.shift();
   const sm = (k, i) => { let s = 0, n = 0; for (let j=Math.max(0,i-12); j<=i; j++){ s += DF.hist[j][k]; n++; } return s/n; };
   const LW=640, LH=200, t0 = DF.hist[0][0], t1 = Math.max(t0 + 20, DF.t);
   const ax = axes(l, LW, LH, [56,16,16,36], [t0, t1], [-3.2, 1.2], [], [-3,-2,-1,0,1], [['time','s']], [['μ','i'],[' / ','r'],['k','i'],['B','sub'],['T','i'],['  (relative)','s']], null, v => v===0 ? '0' : signed(v,0));
@@ -615,8 +620,9 @@ function redrawAll(){ surfRender(); partRender(); piDraw(); piInfo(); muRender()
 let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 80); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); redrawAll(); });
 new MutationObserver(() => { readColors(); redrawAll(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-const vis = {pe:true, pi:true, df:true};
-const io = new IntersectionObserver(es => es.forEach(e => { vis[e.target.dataset.key] = e.isIntersecting; }));
+const vis = {pe:true, pi:true, df:true}, visOn = {pe:new Set(), pi:new Set(), df:new Set()};
+// an experiment keeps running while any one of its canvases is on screen
+const io = new IntersectionObserver(es => es.forEach(e => { const k = e.target.dataset.key; visOn[k][e.isIntersecting ? 'add' : 'delete'](e.target); vis[k] = visOn[k].size > 0; }));
 [['surfCanvas','pe'],['partCanvas','pe'],['pistCanvas','pi'],['difCanvas','df'],['lvlCanvas','df']].forEach(([id,k]) => { $(id).dataset.key = k; io.observe($(id)); });
 let last = performance.now(), infoT = 0;
 function loop(now){
@@ -628,7 +634,7 @@ function loop(now){
     for (let k=0;k<sub && PI.running;k++) piStep(perFrame/sub);
     piDraw(); if (infoT > 0.1 || !PI.running){ infoT = 0; piInfo(); }
   }
-  if (DF.run && vis.df){ for (let k=0;k<3;k++) dfStep(dt*1.2/3); dfDraw(); if (infoT > 0.2){ infoT = 0; dfInfo(); } }
+  if (DF.run && vis.df){ for (let k=0;k<3;k++) dfStep(dt*1.2/3); dfSample(); dfDraw(); if (infoT > 0.2){ infoT = 0; dfInfo(); } }
   requestAnimationFrame(loop);
 }
 peReset(); piReset(); dfInit();
